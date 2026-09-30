@@ -3,21 +3,44 @@ package setbonus
 import "testing"
 
 func TestSingleItemGivesNothing(t *testing.T) {
-	catalog := DefaultCatalog()
-	attack, defense, active := catalog.Apply([]Item{{Slot: "head", Set: "lion"}})
+	inventory := NewInventory(DefaultCatalog())
+	inventory.Equip(Item{Slot: "head", Set: "lion"})
+	attack, defense, active := inventory.Active()
 	if attack != 0 || defense != 0 || len(active) != 0 {
 		t.Fatalf("一两件散件不该有加成：%d %d %v", attack, defense, active)
 	}
 }
 
 func TestEmptyInventory(t *testing.T) {
-	catalog := DefaultCatalog()
-	attack, defense, active := catalog.Apply(nil)
+	attack, defense, active := NewInventory(DefaultCatalog()).Active()
 	if attack != 0 || defense != 0 || len(active) != 0 {
 		t.Fatalf("空装备不该有加成：%d %d %v", attack, defense, active)
 	}
 	if Format(active) != "none" {
 		t.Fatalf("没有档位时应该打成 none：%s", Format(active))
+	}
+}
+
+func TestPiecesCountsDistinctSets(t *testing.T) {
+	inventory := NewInventory(DefaultCatalog())
+	inventory.Equip(Item{Slot: "head", Set: "lion"})
+	inventory.Equip(Item{Slot: "chest", Set: "moon"})
+	inventory.Equip(Item{Slot: "legs", Set: "lion"})
+	if got := inventory.Pieces("lion"); got != 2 {
+		t.Fatalf("lion 应该有两件：%d", got)
+	}
+	if got := inventory.Pieces("moon"); got != 1 {
+		t.Fatalf("moon 应该有一件：%d", got)
+	}
+}
+
+func TestUnequipRemovesSlot(t *testing.T) {
+	inventory := NewInventory(DefaultCatalog())
+	inventory.Equip(Item{Slot: "head", Set: "lion"})
+	inventory.Equip(Item{Slot: "chest", Set: "lion"})
+	inventory.Unequip("head")
+	if got := inventory.Pieces("lion"); got != 1 {
+		t.Fatalf("脱下之后 lion 应该只剩一件：%d", got)
 	}
 }
 
